@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/SageCore/DistributorTrackingV0:${IMAGE_TAG:-latest}
+    image: ghcr.io/sagecore/distributortrackingv0:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
     env_file:
