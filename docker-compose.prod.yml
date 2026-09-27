@@ -1,0 +1,44 @@
+services:
+  api:
+    image: ghcr.io/SageCore/DistributorTrackingV0:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    depends_on:
+      db:
+        condition: service_healthy
+
+    expose:
+      - "8000"
+
+    networks:
+      - tracker_network
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - tracker_network
+
+volumes:
+  postgres_data:
+
+networks:
+  tracker_network:
