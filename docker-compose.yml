@@ -1,0 +1,41 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: distributor_tracker_api
+    ports:
+      - "8000:8000"
+    environment:
+      - APP_ENV=development
+      - APP_NAME=Distributor Tracker API
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/distributor_tracker
+      - V0_API_KEY=v0-distributor-secret-key-change-in-prod
+      - LOG_LEVEL=INFO
+      - DEBUG=true
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    container_name: distributor_tracker_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=distributor_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d distributor_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
