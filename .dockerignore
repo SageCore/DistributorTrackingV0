@@ -12,4 +12,6 @@ htmlcov
 venv
 .venv
 postgres_data
+node_modules
+web
 *.md

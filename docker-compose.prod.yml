@@ -1,6 +1,19 @@
 services:
-  api:
-    image: ghcr.io/sagecore/distributortrackingv0:${IMAGE_TAG:-latest}
+  frontend:
+    image: ghcr.io/sagecore/distributortrackingv0-frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
+
+    networks:
+      - tracker_network
+
+  backend:
+    image: ghcr.io/sagecore/distributortrackingv0-backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
 
     env_file:

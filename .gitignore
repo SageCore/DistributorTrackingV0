@@ -44,3 +44,11 @@ htmlcov/
 
 # Docker / Database local data
 postgres_data/
+
+# Frontend (Node / React / Vite)
+node_modules/
+web/node_modules/
+web/dist/
+web/.env
+web/.env.local
+

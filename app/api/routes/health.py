@@ -28,3 +28,9 @@ async def health_check(db: AsyncSession = Depends(get_db)):
 async def health_db_check(db: AsyncSession = Depends(get_db)):
     """Dedicated database health check endpoint."""
     return await health_check(db)
+
+
+@router.get("/api/health", response_model=HealthResponse)
+async def health_api_check(db: AsyncSession = Depends(get_db)):
+    """Alias for /health under /api prefix."""
+    return await health_check(db)
