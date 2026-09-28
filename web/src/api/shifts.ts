@@ -10,11 +10,11 @@ export const fetchShifts = async (
   if (statusFilter && statusFilter !== 'ALL') {
     params.status = statusFilter;
   }
-  const response = await apiClient.get<Shift[]>('/api/v0/shifts', { params });
+  const response = await apiClient.get<Shift[]>('/v0/shifts', { params });
   return response.data;
 };
 
 export const fetchShiftById = async (shiftId: string): Promise<Shift> => {
-  const response = await apiClient.get<Shift>(`/api/v0/shifts/${shiftId}`);
+  const response = await apiClient.get<Shift>(`/v0/shifts/${shiftId}`);
   return response.data;
 };

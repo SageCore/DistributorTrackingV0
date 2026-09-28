@@ -6,7 +6,7 @@ export const fetchShiftLocations = async (
   limit: number = 1000
 ): Promise<RoutePoint[]> => {
   const response = await apiClient.get<RoutePoint[]>(
-    `/api/v0/shifts/${shiftId}/locations`,
+    `/v0/shifts/${shiftId}/locations`,
     {
       params: { order: 'asc', limit },
     }
