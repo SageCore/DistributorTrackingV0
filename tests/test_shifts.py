@@ -80,3 +80,50 @@ async def test_complete_nonexistent_shift(client: AsyncClient, auth_headers: dic
     )
     assert response.status_code == 404
     assert "not found" in response.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_shifts_with_counts(client: AsyncClient, auth_headers: dict[str, str]):
+    """Test GET /api/v0/shifts and GET /api/v0/shifts/{id} return shift with location_count."""
+    shift_id = str(uuid.uuid4())
+    await client.post(
+        "/api/v0/shifts",
+        json={"id": shift_id, "device_id": "web-test-device", "started_at": "2026-09-27T08:00:00Z"},
+        headers=auth_headers,
+    )
+    # Upload location batch
+    loc_id = str(uuid.uuid4())
+    await client.post(
+        "/api/v0/locations/batch",
+        json={
+            "locations": [
+                {
+                    "id": loc_id,
+                    "shift_id": shift_id,
+                    "latitude": 31.5204,
+                    "longitude": 74.3587,
+                    "device_timestamp": "2026-09-27T08:01:00Z",
+                }
+            ]
+        },
+        headers=auth_headers,
+    )
+
+    # GET /shifts
+    res_list = await client.get("/api/v0/shifts", headers=auth_headers)
+    assert res_list.status_code == 200
+    shifts = res_list.json()
+    matching = [s for s in shifts if s["id"] == shift_id]
+    assert len(matching) == 1
+    assert matching[0]["location_count"] == 1
+
+    # GET /shifts/{id}
+    res_detail = await client.get(f"/api/v0/shifts/{shift_id}", headers=auth_headers)
+    assert res_detail.status_code == 200
+    assert res_detail.json()["location_count"] == 1
+
+    # GET /shifts/{id}/locations
+    res_locs = await client.get(f"/api/v0/shifts/{shift_id}/locations", headers=auth_headers)
+    assert res_locs.status_code == 200
+    assert len(res_locs.json()) == 1
+    assert res_locs.json()[0]["id"] == loc_id

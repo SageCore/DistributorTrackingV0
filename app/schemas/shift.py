@@ -35,3 +35,11 @@ class ShiftCreateResponse(ShiftResponse):
     """Response schema when registering a shift, including idempotency indicator."""
 
     created: bool = Field(..., description="True if new shift created, False if existing shift returned")
+
+
+class ShiftWithCountResponse(ShiftResponse):
+    """Response schema for shift details including total synchronized location count."""
+
+    location_count: int = Field(default=0, description="Total synchronized location points for this shift")
+    last_location_time: datetime | None = Field(default=None, description="Device timestamp of the latest route point")
+

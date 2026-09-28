@@ -16,6 +16,8 @@ async def lifespan(app: FastAPI):
     logger.info(f"Shutting down {settings.APP_NAME}")
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(
     title=settings.APP_NAME,
     description="Distributor GPS Tracking Backend API (V0)",
@@ -24,6 +26,15 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
+)
+
+# Configure CORS for local development and authorized web origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Exception handler to prevent stack traces in production
