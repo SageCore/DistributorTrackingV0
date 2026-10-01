@@ -126,7 +126,7 @@ async def get_today_progress(db: AsyncSession = Depends(get_db)):
                 assignedCount=assigned_cnt,
                 deliveredCount=delivered_cnt,
                 pendingCount=pending_cnt,
-                missedCount=miss_cnt if 'miss_cnt' in locals() else missed_cnt,
+                missedCount=missed_cnt,
             )
         )
     return out

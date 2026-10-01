@@ -61,6 +61,21 @@ LAHORE_TEST_LOCATIONS = [
 
 async def seed_v2_data(db: AsyncSession) -> Employee:
     """Idempotently seed V2 initial employee, Lahore customer locations, and associate unassigned historical shifts."""
+    # 0. Ensure V2 tables and shifts.employee_id column exist on existing databases
+    try:
+        from sqlalchemy import text
+        from app.db.base import Base
+        import app.db.models  # noqa: F401
+
+        conn = await db.connection()
+        await conn.run_sync(Base.metadata.create_all)
+        await db.execute(text("ALTER TABLE shifts ADD COLUMN IF NOT EXISTS employee_id UUID REFERENCES employees(id) ON DELETE SET NULL;"))
+        await db.execute(text("CREATE INDEX IF NOT EXISTS idx_shifts_employee_id ON shifts (employee_id);"))
+        await db.commit()
+    except Exception as e:
+        logger.warning(f"Auto-migration/schema check in seed_v2_data notice: {e}")
+        await db.rollback()
+
     # 1. Seed or get Demo Employee (EMP-001)
     emp_res = await db.execute(select(Employee).where(Employee.employee_code == "EMP-001"))
     emp001 = emp_res.scalar_one_or_none()
