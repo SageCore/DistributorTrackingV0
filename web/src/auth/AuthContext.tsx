@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState } from 'react';
 import { User } from '../types';
 import { loginApi } from '../api/auth';
 
@@ -19,49 +19,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return saved ? JSON.parse(saved) : null;
   });
 
-  useEffect(() => {
-    if (!user && !token) {
-      const defaultUser: User = {
-        id: 'usr-admin-1',
-        username: 'admin',
-        name: 'Administrator',
-        email: 'admin@distributor.com',
-        role: 'DISTRIBUTOR_ADMIN',
-        distributor_name: 'Al-Rehman Distribution',
-        distributorName: 'Al-Rehman Distribution',
-      };
-      const defaultToken = 'v2-demo-auth-token';
-      setToken(defaultToken);
-      setUser(defaultUser);
-      localStorage.setItem('v2_auth_token', defaultToken);
-      localStorage.setItem('v2_user', JSON.stringify(defaultUser));
-    }
-  }, [user, token]);
-
   const login = async (username: string, password?: string) => {
-    try {
-      const authResponse = await loginApi(username, password || '');
-      setToken(authResponse.token);
-      setUser(authResponse.user);
-      localStorage.setItem('v2_auth_token', authResponse.token);
-      localStorage.setItem('v2_user', JSON.stringify(authResponse.user));
-    } catch (err) {
-      // Fallback for demo if backend endpoint is not yet connected
-      const demoUser: User = {
-        id: 'usr-admin-1',
-        username,
-        name: username.split('@')[0] || 'Admin User',
-        email: username,
-        role: 'DISTRIBUTOR_ADMIN',
-        distributor_name: 'Al-Rehman Distribution',
-        distributorName: 'Al-Rehman Distribution',
-      };
-      const demoToken = 'v2-demo-token-' + Date.now();
-      setToken(demoToken);
-      setUser(demoUser);
-      localStorage.setItem('v2_auth_token', demoToken);
-      localStorage.setItem('v2_user', JSON.stringify(demoUser));
-    }
+    const authResponse = await loginApi(username, password || '');
+    setToken(authResponse.token);
+    setUser(authResponse.user);
+    localStorage.setItem('v2_auth_token', authResponse.token);
+    localStorage.setItem('v2_user', JSON.stringify(authResponse.user));
   };
 
   const logout = () => {

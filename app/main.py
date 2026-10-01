@@ -7,12 +7,19 @@ from app.api.router import api_v0_router, api_v2_router, health_router
 from app.core.config import settings
 from app.core.logging import logger
 from app.schemas.common import RootResponse
+from app.db.session import async_session_factory
+from app.db.seed import seed_v2_data
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Lifecycle events for FastAPI application."""
     logger.info(f"Starting {settings.APP_NAME} in environment '{settings.APP_ENV}'")
+    try:
+        async with async_session_factory() as session:
+            await seed_v2_data(session)
+    except Exception as e:
+        logger.warning(f"Initial V2 seed check skipped or handled: {e}")
     yield
     logger.info(f"Shutting down {settings.APP_NAME}")
 

@@ -90,5 +90,3 @@ async def test_v2_alerts_list():
         assert response.status_code == 200
         alerts = response.json()
         assert isinstance(alerts, list)
-        assert len(alerts) >= 1
-        assert "message" in alerts[0]

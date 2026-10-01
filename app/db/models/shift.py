@@ -1,14 +1,15 @@
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional
 
-from sqlalchemy import DateTime, Index, String, UUID
+from sqlalchemy import DateTime, ForeignKey, Index, String, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.db.models.location import Location
+    from app.db.models.employee import Employee
 
 
 class Shift(Base):
@@ -18,6 +19,12 @@ class Shift(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     device_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    employee_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("employees.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="ACTIVE", index=True)
@@ -39,7 +46,9 @@ class Shift(Base):
         cascade="all, delete-orphan",
         passive_deletes=False,
     )
+    employee: Mapped[Optional["Employee"]] = relationship("Employee")
 
     __table_args__ = (
         Index("idx_shifts_status", "status"),
+        Index("idx_shifts_employee_id", "employee_id"),
     )

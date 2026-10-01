@@ -42,6 +42,11 @@ def upgrade() -> None:
     op.create_index('idx_employees_distributor_id', 'employees', ['distributor_id'], unique=False)
     op.create_index('idx_employees_active', 'employees', ['active'], unique=False)
 
+    # Add employee_id to shifts table
+    op.add_column('shifts', sa.Column('employee_id', sa.UUID(), nullable=True))
+    op.create_foreign_key('fk_shifts_employee_id', 'shifts', 'employees', ['employee_id'], ['id'], ondelete='SET NULL')
+    op.create_index('idx_shifts_employee_id', 'shifts', ['employee_id'], unique=False)
+
     # 2. Customer Locations Table
     op.create_table(
         'customer_locations',
@@ -118,4 +123,7 @@ def downgrade() -> None:
     op.drop_table('assigned_visits')
     op.drop_table('daily_assignments')
     op.drop_table('customer_locations')
+    op.drop_index('idx_shifts_employee_id', table_name='shifts')
+    op.drop_constraint('fk_shifts_employee_id', 'shifts', type_='foreignkey')
+    op.drop_column('shifts', 'employee_id')
     op.drop_table('employees')
