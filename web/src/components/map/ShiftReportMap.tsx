@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, CircleMarker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { ShiftReport } from '../../types';
+import { ShiftReport, RoutePoint } from '../../types';
+import { formatTimestamp, formatFallback, sortPointsByDeviceTimestamp } from '../../utils/formatting';
 
 const createCustomIcon = (color: string, label: string) => {
   return L.divIcon({
@@ -39,12 +40,17 @@ const pendingIcon = createCustomIcon('#f59e0b', '📍');
 
 interface ShiftReportMapProps {
   report: ShiftReport;
+  showGpsPoints?: boolean;
+  selectedPointId?: string | null;
+  onSelectPoint?: (point: RoutePoint) => void;
 }
 
 const FitBounds: React.FC<{ points: [number, number][] }> = ({ points }) => {
   const map = useMap();
   useEffect(() => {
-    if (points.length > 0) {
+    if (points.length === 1) {
+      map.setView(points[0], 15);
+    } else if (points.length > 1) {
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
     }
@@ -52,9 +58,40 @@ const FitBounds: React.FC<{ points: [number, number][] }> = ({ points }) => {
   return null;
 };
 
-export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({ report }) => {
-  const routePts = report.routePoints || report.route_points || [];
+const MapPanFocus: React.FC<{ selectedPoint: RoutePoint | null }> = ({ selectedPoint }) => {
+  const map = useMap();
+  useEffect(() => {
+    if (selectedPoint && typeof selectedPoint.latitude === 'number' && typeof selectedPoint.longitude === 'number') {
+      map.panTo([selectedPoint.latitude, selectedPoint.longitude], { animate: true });
+    }
+  }, [selectedPoint, map]);
+  return null;
+};
+
+export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({
+  report,
+  showGpsPoints = true,
+  selectedPointId = null,
+  onSelectPoint,
+}) => {
+  const rawRoutePts = report.routePoints || report.route_points || [];
   const visits = report.assignedVisits || (report as any).visits || [];
+
+  // Filter valid coordinates
+  const validRoutePts = rawRoutePts.filter(
+    (pt) =>
+      pt &&
+      typeof pt.latitude === 'number' &&
+      typeof pt.longitude === 'number' &&
+      !isNaN(pt.latitude) &&
+      !isNaN(pt.longitude) &&
+      pt.latitude >= -90 &&
+      pt.latitude <= 90 &&
+      pt.longitude >= -180 &&
+      pt.longitude <= 180
+  );
+
+  const routePts = sortPointsByDeviceTimestamp(validRoutePts);
 
   const boundsPoints: [number, number][] = [];
 
@@ -63,19 +100,20 @@ export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({ report }) => {
   });
 
   visits.forEach((visit: any) => {
-    if (visit.location) {
+    if (visit.location && typeof visit.location.latitude === 'number' && typeof visit.location.longitude === 'number') {
       boundsPoints.push([visit.location.latitude, visit.location.longitude]);
     }
   });
 
   const defaultCenter: [number, number] =
-    boundsPoints.length > 0 ? boundsPoints[0] : [24.8607, 67.0011];
+    boundsPoints.length > 0 ? boundsPoints[0] : [31.5204, 74.3587];
 
   const firstPoint = routePts[0];
   const lastPoint = routePts.length > 1 ? routePts[routePts.length - 1] : null;
+  const selectedPoint = routePts.find((pt) => pt.id === selectedPointId) || null;
 
   return (
-    <div style={{ height: '380px', width: '100%', borderRadius: '8px', overflow: 'hidden' }}>
+    <div style={{ height: '420px', width: '100%', borderRadius: '8px', overflow: 'hidden' }}>
       <MapContainer
         center={defaultCenter}
         zoom={13}
@@ -87,6 +125,7 @@ export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({ report }) => {
         />
 
         {boundsPoints.length > 0 && <FitBounds points={boundsPoints} />}
+        <MapPanFocus selectedPoint={selectedPoint} />
 
         {/* Route Polyline */}
         {routePts.length > 1 && (
@@ -96,17 +135,54 @@ export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({ report }) => {
           />
         )}
 
+        {/* Recorded GPS Dots Inspection Layer */}
+        {showGpsPoints &&
+          routePts.map((pt, idx) => {
+            const isSelected = pt.id === selectedPointId;
+            const deviceTime = pt.device_timestamp || pt.deviceTimestamp;
+            const accuracy = pt.accuracy_meters ?? pt.gpsAccuracyMeters;
+            const speed = pt.speed_mps ?? pt.speedMps;
+            const bearing = pt.bearing_degrees ?? pt.bearingDegrees;
+
+            return (
+              <CircleMarker
+                key={pt.id || idx}
+                center={[pt.latitude, pt.longitude]}
+                radius={isSelected ? 8 : 4}
+                pathOptions={{
+                  color: isSelected ? '#f59e0b' : '#1d4ed8',
+                  fillColor: isSelected ? '#fbbf24' : '#3b82f6',
+                  fillOpacity: isSelected ? 1 : 0.75,
+                  weight: isSelected ? 3 : 1.5,
+                }}
+                eventHandlers={{
+                  click: () => onSelectPoint && onSelectPoint(pt),
+                }}
+              >
+                <Popup>
+                  <div style={{ fontSize: '0.85rem', lineHeight: '1.4', minWidth: '180px' }}>
+                    <div style={{ fontWeight: 700, marginBottom: '4px', color: '#1e293b' }}>
+                      GPS Record #{idx + 1}
+                    </div>
+                    <div><strong>Recorded At:</strong> {formatTimestamp(deviceTime)}</div>
+                    <div><strong>Latitude:</strong> {pt.latitude.toFixed(6)}</div>
+                    <div><strong>Longitude:</strong> {pt.longitude.toFixed(6)}</div>
+                    <div><strong>Accuracy:</strong> {formatFallback(accuracy, 'm')}</div>
+                    <div><strong>Speed:</strong> {formatFallback(speed, 'm/s')}</div>
+                    <div><strong>Bearing:</strong> {formatFallback(bearing, '°')}</div>
+                  </div>
+                </Popup>
+              </CircleMarker>
+            );
+          })}
+
         {/* Start Position Marker */}
         {firstPoint && (
           <Marker position={[firstPoint.latitude, firstPoint.longitude]} icon={startIcon}>
             <Popup>
               <div>
                 <strong>Shift Start Location</strong>
-                <div>
-                  {firstPoint.deviceTimestamp || firstPoint.device_timestamp
-                    ? new Date(firstPoint.deviceTimestamp || firstPoint.device_timestamp).toLocaleTimeString()
-                    : '—'}
-                </div>
+                <div>{formatTimestamp(firstPoint.device_timestamp || firstPoint.deviceTimestamp)}</div>
               </div>
             </Popup>
           </Marker>
@@ -118,11 +194,7 @@ export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({ report }) => {
             <Popup>
               <div>
                 <strong>Shift End / Last Recorded Location</strong>
-                <div>
-                  {lastPoint.deviceTimestamp || lastPoint.device_timestamp
-                    ? new Date(lastPoint.deviceTimestamp || lastPoint.device_timestamp).toLocaleTimeString()
-                    : '—'}
-                </div>
+                <div>{formatTimestamp(lastPoint.device_timestamp || lastPoint.deviceTimestamp)}</div>
               </div>
             </Popup>
           </Marker>
@@ -157,13 +229,11 @@ export const ShiftReportMap: React.FC<ShiftReportMapProps> = ({ report }) => {
                     <>
                       <div>
                         <strong>Delivered At:</strong>{' '}
-                        {visit.deliveredAt || visit.delivered_at
-                          ? new Date(visit.deliveredAt || visit.delivered_at).toLocaleTimeString()
-                          : '—'}
+                        {formatTimestamp(visit.deliveredAt || visit.delivered_at)}
                       </div>
                       <div>
                         <strong>Verified Distance:</strong>{' '}
-                        {visit.verifiedDistanceMeters ?? visit.verified_distance_meters ?? '—'} m
+                        {formatFallback(visit.verifiedDistanceMeters ?? visit.verified_distance_meters, 'm')}
                       </div>
                     </>
                   )}

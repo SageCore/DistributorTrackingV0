@@ -65,8 +65,16 @@ export const formatFallback = (
 export const sortPointsByDeviceTimestamp = (points: RoutePoint[]): RoutePoint[] => {
   if (!points || !Array.isArray(points)) return [];
   return [...points].sort((a, b) => {
-    const timeA = new Date(a.device_timestamp).getTime();
-    const timeB = new Date(b.device_timestamp).getTime();
+    const tsA = a.device_timestamp || a.deviceTimestamp || '';
+    const tsB = b.device_timestamp || b.deviceTimestamp || '';
+    const timeA = new Date(tsA).getTime();
+    const timeB = new Date(tsB).getTime();
+    if (isNaN(timeA) && isNaN(timeB)) return 0;
+    if (isNaN(timeA)) return 1;
+    if (isNaN(timeB)) return -1;
+    if (timeA === timeB) {
+      return (a.id || '').localeCompare(b.id || '');
+    }
     return timeA - timeB;
   });
 };

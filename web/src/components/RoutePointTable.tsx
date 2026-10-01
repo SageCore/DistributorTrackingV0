@@ -16,61 +16,61 @@ export const RoutePointTable: React.FC<RoutePointTableProps> = ({
 }) => {
   if (!points || points.length === 0) {
     return (
-      <div className="state-box">
-        <p className="state-title">No persistent route points</p>
-        <p className="state-desc">This shift does not contain any synchronized location records yet.</p>
+      <div className="state-box" style={{ padding: '2rem', textAlign: 'center' }}>
+        <p className="state-title" style={{ fontWeight: 600, color: '#64748b' }}>No persistent route points</p>
+        <p className="state-desc" style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+          No valid GPS route points were recorded for this shift.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="table-wrapper">
+    <div className="table-wrapper" style={{ overflowX: 'auto' }}>
       <table className="data-table">
         <thead>
           <tr>
             <th>#</th>
-            <th>Device Timestamp</th>
-            <th>Server Received</th>
-            <th>GPS Quality</th>
+            <th>Recorded At</th>
+            <th>Latitude</th>
+            <th>Longitude</th>
             <th>Accuracy</th>
-            <th>Speed</th>
+            <th>Speed (m/s)</th>
             <th>Bearing</th>
-            <th>Mock</th>
-            <th>Coordinates</th>
-            <th>Point UUID</th>
           </tr>
         </thead>
         <tbody>
           {points.map((pt, idx) => {
             const isSelected = pt.id === selectedPointId;
+            const accuracy = pt.accuracy_meters ?? pt.gpsAccuracyMeters;
+            const speed = pt.speed_mps ?? pt.speedMps;
+            const bearing = pt.bearing_degrees ?? pt.bearingDegrees;
+            const deviceTime = pt.device_timestamp || pt.deviceTimestamp;
+
             return (
               <tr
-                key={pt.id}
+                key={pt.id || idx}
+                id={`gps-row-${pt.id}`}
                 className={`clickable ${isSelected ? 'selected' : ''}`}
+                style={{
+                  backgroundColor: isSelected ? '#eff6ff' : undefined,
+                  borderLeft: isSelected ? '4px solid #2563eb' : undefined,
+                  cursor: 'pointer',
+                }}
                 onClick={() => onSelectPoint(pt)}
               >
                 <td style={{ fontWeight: 600, color: '#64748b' }}>{idx + 1}</td>
-                <td>{formatTimestamp(pt.device_timestamp)}</td>
-                <td style={{ color: '#64748b', fontSize: '0.8rem' }}>{formatTimestamp(pt.received_at)}</td>
+                <td>{formatTimestamp(deviceTime)}</td>
+                <td>{pt.latitude != null ? pt.latitude.toFixed(6) : '—'}</td>
+                <td>{pt.longitude != null ? pt.longitude.toFixed(6) : '—'}</td>
                 <td>
-                  <GpsQualityBadge accuracyMeters={pt.accuracy_meters} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    {formatFallback(accuracy, 'm')}
+                    {accuracy != null && <GpsQualityBadge accuracyMeters={accuracy} />}
+                  </span>
                 </td>
-                <td>{formatFallback(pt.accuracy_meters, 'm')}</td>
-                <td>{formatFallback(pt.speed_mps, 'm/s')}</td>
-                <td>{formatFallback(pt.bearing_degrees, '°')}</td>
-                <td>
-                  {pt.is_mock ? (
-                    <span style={{ color: '#ef4444', fontWeight: 600 }}>Yes</span>
-                  ) : (
-                    <span style={{ color: '#64748b' }}>No</span>
-                  )}
-                </td>
-                <td>
-                  {pt.latitude.toFixed(5)}, {pt.longitude.toFixed(5)}
-                </td>
-                <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748b' }}>
-                  {pt.id}
-                </td>
+                <td>{formatFallback(speed, 'm/s')}</td>
+                <td>{formatFallback(bearing, '°')}</td>
               </tr>
             );
           })}

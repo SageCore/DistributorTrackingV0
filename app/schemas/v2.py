@@ -163,6 +163,10 @@ class RoutePointResponse(BaseModel):
     longitude: float
     accuracy_meters: Optional[float] = None
     gpsAccuracyMeters: Optional[float] = None
+    speed_mps: Optional[float] = None
+    speedMps: Optional[float] = None
+    bearing_degrees: Optional[float] = None
+    bearingDegrees: Optional[float] = None
     device_timestamp: datetime
     deviceTimestamp: Optional[datetime] = None
 

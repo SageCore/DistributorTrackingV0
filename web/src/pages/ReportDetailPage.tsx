@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { fetchShiftReportDetail } from '../api/reports';
 import { ShiftReportMap } from '../components/map/ShiftReportMap';
-import { formatDuration } from '../utils/formatting';
+import { RoutePointTable } from '../components/RoutePointTable';
+import { RoutePoint } from '../types';
+import { formatDuration, formatTimestamp, formatFallback, sortPointsByDeviceTimestamp } from '../utils/formatting';
 
 export const ReportDetailPage: React.FC = () => {
   const { shiftId } = useParams<{ shiftId: string }>();
   const navigate = useNavigate();
+
+  const [selectedPoint, setSelectedPoint] = useState<RoutePoint | null>(null);
+  const [showGpsPoints, setShowGpsPoints] = useState<boolean>(true);
 
   const { data: report, isLoading, isError } = useQuery({
     queryKey: ['shiftReportDetail', shiftId],
@@ -35,6 +40,18 @@ export const ReportDetailPage: React.FC = () => {
     );
   }
 
+  const rawPoints = report.routePoints || report.route_points || [];
+  const routePoints = sortPointsByDeviceTimestamp(rawPoints);
+
+  const handleSelectPoint = (pt: RoutePoint) => {
+    setSelectedPoint(pt);
+    // Smooth scroll to GPS point row in table if triggered from map
+    const rowEl = document.getElementById(`gps-row-${pt.id}`);
+    if (rowEl) {
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  };
+
   return (
     <div className="report-detail-page">
       {/* Report Header Card */}
@@ -46,11 +63,11 @@ export const ReportDetailPage: React.FC = () => {
             <div className="report-meta-line">
               <span>Date: {report.date}</span> •{' '}
               <span>
-                Start: {report.startTime ? new Date(report.startTime).toLocaleTimeString() : '—'}
+                Start: {report.startTime ? formatTimestamp(report.startTime) : '—'}
               </span>{' '}
               •{' '}
               <span>
-                End: {report.endTime ? new Date(report.endTime).toLocaleTimeString() : '—'}
+                End: {report.endTime ? formatTimestamp(report.endTime) : '—'}
               </span>{' '}
               • <span>Duration: {formatDuration(report.durationMinutes)}</span>
             </div>
@@ -93,10 +110,66 @@ export const ReportDetailPage: React.FC = () => {
 
       {/* Route & Visit Locations Map */}
       <div className="content-section">
-        <div className="section-header">
+        <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <h3>Actual Tracked Route vs Assigned Locations</h3>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#334155', backgroundColor: '#f1f5f9', padding: '6px 12px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+            <input
+              type="checkbox"
+              checked={showGpsPoints}
+              onChange={(e) => setShowGpsPoints(e.target.checked)}
+              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            GPS Points ({routePoints.length})
+          </label>
         </div>
-        <ShiftReportMap report={report} />
+        <ShiftReportMap
+          report={report}
+          showGpsPoints={showGpsPoints}
+          selectedPointId={selectedPoint?.id || null}
+          onSelectPoint={handleSelectPoint}
+        />
+      </div>
+
+      {/* Selected GPS Point Metadata Panel */}
+      {selectedPoint && (
+        <div className="content-section" style={{ marginTop: '20px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+            <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1e40af' }}>
+              Selected GPS Point Details
+            </h4>
+            <button
+              type="button"
+              className="secondary-btn"
+              style={{ padding: '4px 10px', fontSize: '0.75rem' }}
+              onClick={() => setSelectedPoint(null)}
+            >
+              Clear Selection
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', fontSize: '0.875rem' }}>
+            <div><strong>Recorded At:</strong> {formatTimestamp(selectedPoint.device_timestamp || selectedPoint.deviceTimestamp)}</div>
+            <div><strong>Latitude:</strong> {selectedPoint.latitude.toFixed(6)}</div>
+            <div><strong>Longitude:</strong> {selectedPoint.longitude.toFixed(6)}</div>
+            <div><strong>Accuracy:</strong> {formatFallback(selectedPoint.accuracy_meters ?? selectedPoint.gpsAccuracyMeters, 'm')}</div>
+            <div><strong>Speed:</strong> {formatFallback(selectedPoint.speed_mps ?? selectedPoint.speedMps, 'm/s')}</div>
+            <div><strong>Bearing:</strong> {formatFallback(selectedPoint.bearing_degrees ?? selectedPoint.bearingDegrees, '°')}</div>
+            <div style={{ gridColumn: '1 / -1', fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748b' }}>
+              Point ID: {selectedPoint.id}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GPS Route Points Inspection Table */}
+      <div className="content-section" style={{ marginTop: '24px' }}>
+        <div className="section-header">
+          <h3>GPS Route Points ({routePoints.length})</h3>
+        </div>
+        <RoutePointTable
+          points={routePoints}
+          selectedPointId={selectedPoint?.id || null}
+          onSelectPoint={handleSelectPoint}
+        />
       </div>
 
       {/* Visit Verification Table */}
@@ -131,19 +204,15 @@ export const ReportDetailPage: React.FC = () => {
                     </span>
                   </td>
                   <td>
-                    {visit.deliveredAt
-                      ? new Date(visit.deliveredAt).toLocaleTimeString()
+                    {visit.deliveredAt || visit.delivered_at
+                      ? formatTimestamp(visit.deliveredAt || visit.delivered_at)
                       : '—'}
                   </td>
                   <td>
-                    {visit.verifiedDistanceMeters !== undefined
-                      ? `${visit.verifiedDistanceMeters} m`
-                      : '—'}
+                    {formatFallback(visit.verifiedDistanceMeters ?? visit.verified_distance_meters, 'm')}
                   </td>
                   <td>
-                    {visit.gpsAccuracyMeters !== undefined
-                      ? `${visit.gpsAccuracyMeters} m`
-                      : '—'}
+                    {formatFallback(visit.gpsAccuracyMeters ?? visit.gps_accuracy_meters, 'm')}
                   </td>
                 </tr>
               ))}

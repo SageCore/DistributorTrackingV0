@@ -137,6 +137,10 @@ async def get_shift_report_detail(id: uuid.UUID, db: AsyncSession = Depends(get_
             longitude=pt.longitude,
             accuracy_meters=pt.accuracy_meters,
             gpsAccuracyMeters=pt.accuracy_meters,
+            speed_mps=pt.speed_mps,
+            speedMps=pt.speed_mps,
+            bearing_degrees=pt.bearing_degrees,
+            bearingDegrees=pt.bearing_degrees,
             device_timestamp=pt.device_timestamp,
             deviceTimestamp=pt.device_timestamp,
         )

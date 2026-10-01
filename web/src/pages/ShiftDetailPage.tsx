@@ -12,6 +12,7 @@ import { formatFallback, formatTimestamp, sortPointsByDeviceTimestamp } from '..
 export const ShiftDetailPage: React.FC = () => {
   const { shiftId } = useParams<{ shiftId: string }>();
   const [selectedPoint, setSelectedPoint] = useState<RoutePoint | null>(null);
+  const [showGpsPoints, setShowGpsPoints] = useState<boolean>(true);
 
   // 1. Fetch Shift Details
   const {
@@ -26,7 +27,6 @@ export const ShiftDetailPage: React.FC = () => {
     queryFn: () => fetchShiftById(shiftId!),
     enabled: Boolean(shiftId),
     refetchInterval: (query) => {
-      // Periodically refetch every 30s only if the shift is active
       const status = query.state.data?.status;
       return status === 'ACTIVE' ? 30000 : false;
     },
@@ -53,6 +53,14 @@ export const ShiftDetailPage: React.FC = () => {
   const handleRefresh = () => {
     refetchShift();
     refetchLocations();
+  };
+
+  const handleSelectPoint = (pt: RoutePoint) => {
+    setSelectedPoint(pt);
+    const rowEl = document.getElementById(`gps-row-${pt.id}`);
+    if (rowEl) {
+      rowEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
   };
 
   if (isShiftLoading) {
@@ -153,14 +161,12 @@ export const ShiftDetailPage: React.FC = () => {
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', fontSize: '0.85rem' }}>
-            <div><strong>Device Timestamp:</strong> {formatTimestamp(selectedPoint.device_timestamp)}</div>
-            <div><strong>Server Received:</strong> {formatTimestamp(selectedPoint.received_at)}</div>
+            <div><strong>Recorded At:</strong> {formatTimestamp(selectedPoint.device_timestamp || selectedPoint.deviceTimestamp)}</div>
             <div><strong>Latitude:</strong> {selectedPoint.latitude.toFixed(6)}</div>
             <div><strong>Longitude:</strong> {selectedPoint.longitude.toFixed(6)}</div>
-            <div><strong>Accuracy:</strong> {formatFallback(selectedPoint.accuracy_meters, 'm')}</div>
-            <div><strong>Speed:</strong> {formatFallback(selectedPoint.speed_mps, 'm/s')}</div>
-            <div><strong>Bearing:</strong> {formatFallback(selectedPoint.bearing_degrees, '°')}</div>
-            <div><strong>Mock Location:</strong> {formatFallback(selectedPoint.is_mock)}</div>
+            <div><strong>Accuracy:</strong> {formatFallback(selectedPoint.accuracy_meters ?? selectedPoint.gpsAccuracyMeters, 'm')}</div>
+            <div><strong>Speed:</strong> {formatFallback(selectedPoint.speed_mps ?? selectedPoint.speedMps, 'm/s')}</div>
+            <div><strong>Bearing:</strong> {formatFallback(selectedPoint.bearing_degrees ?? selectedPoint.bearingDegrees, '°')}</div>
             <div style={{ gridColumn: '1 / -1', fontFamily: 'monospace', fontSize: '0.75rem', color: '#64748b' }}>
               Point UUID: {selectedPoint.id}
             </div>
@@ -170,9 +176,20 @@ export const ShiftDetailPage: React.FC = () => {
 
       {/* Route Map Section */}
       <div className="card">
-        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '1rem' }}>
-          Synchronized Route Map
-        </h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, margin: 0 }}>
+            Synchronized Route Map
+          </h2>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, color: '#334155', backgroundColor: '#f1f5f9', padding: '4px 10px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+            <input
+              type="checkbox"
+              checked={showGpsPoints}
+              onChange={(e) => setShowGpsPoints(e.target.checked)}
+              style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+            />
+            GPS Points ({locations.length})
+          </label>
+        </div>
         {isLocsLoading ? (
           <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b' }}>
             <div className="spinner" style={{ marginBottom: '0.5rem' }}></div>
@@ -185,8 +202,9 @@ export const ShiftDetailPage: React.FC = () => {
         ) : (
           <RouteMap
             points={locations}
+            showGpsPoints={showGpsPoints}
             selectedPointId={selectedPoint?.id || null}
-            onSelectPoint={setSelectedPoint}
+            onSelectPoint={handleSelectPoint}
           />
         )}
       </div>
@@ -199,7 +217,7 @@ export const ShiftDetailPage: React.FC = () => {
         <RoutePointTable
           points={locations}
           selectedPointId={selectedPoint?.id || null}
-          onSelectPoint={setSelectedPoint}
+          onSelectPoint={handleSelectPoint}
         />
       </div>
     </div>

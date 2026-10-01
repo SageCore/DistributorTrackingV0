@@ -33,21 +33,23 @@ export interface Shift {
 
 export interface RoutePoint {
   id: string;
-  shift_id: string;
+  shift_id?: string;
   latitude: number;
   longitude: number;
-  accuracy_meters: number | null;
-  altitude_meters: number | null;
-  speed_mps: number | null;
-  bearing_degrees: number | null;
+  accuracy_meters?: number | null;
+  altitude_meters?: number | null;
+  speed_mps?: number | null;
+  bearing_degrees?: number | null;
   device_timestamp: string;
-  recorded_timestamp: string | null;
-  is_mock: boolean;
-  received_at: string;
-  created_at: string;
+  recorded_timestamp?: string | null;
+  is_mock?: boolean;
+  received_at?: string;
+  created_at?: string;
   // camelCase aliases
   shiftId?: string;
-  gpsAccuracyMeters?: number;
+  gpsAccuracyMeters?: number | null;
+  speedMps?: number | null;
+  bearingDegrees?: number | null;
   deviceTimestamp?: string;
 }
 

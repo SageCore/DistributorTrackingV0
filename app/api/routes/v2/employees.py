@@ -121,6 +121,10 @@ async def get_live_employees(db: AsyncSession = Depends(get_db)):
                         longitude=pt.longitude,
                         accuracy_meters=pt.accuracy_meters,
                         gpsAccuracyMeters=pt.accuracy_meters,
+                        speed_mps=pt.speed_mps,
+                        speedMps=pt.speed_mps,
+                        bearing_degrees=pt.bearing_degrees,
+                        bearingDegrees=pt.bearing_degrees,
                         device_timestamp=pt.device_timestamp,
                         deviceTimestamp=pt.device_timestamp,
                     )
@@ -200,6 +204,10 @@ async def get_live_employees(db: AsyncSession = Depends(get_db)):
                 longitude=latest_pt.longitude,
                 accuracy_meters=latest_pt.accuracy_meters,
                 gpsAccuracyMeters=latest_pt.accuracy_meters,
+                speed_mps=latest_pt.speed_mps,
+                speedMps=latest_pt.speed_mps,
+                bearing_degrees=latest_pt.bearing_degrees,
+                bearingDegrees=latest_pt.bearing_degrees,
                 device_timestamp=latest_pt.device_timestamp,
                 deviceTimestamp=latest_pt.device_timestamp,
             )
