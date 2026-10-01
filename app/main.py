@@ -1,8 +1,9 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.router import api_v0_router, health_router
+from app.api.router import api_v0_router, api_v2_router, health_router
 from app.core.config import settings
 from app.core.logging import logger
 from app.schemas.common import RootResponse
@@ -16,12 +17,10 @@ async def lifespan(app: FastAPI):
     logger.info(f"Shutting down {settings.APP_NAME}")
 
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app = FastAPI(
     title=settings.APP_NAME,
-    description="Distributor GPS Tracking Backend API (V0)",
-    version="0.1.0",
+    description="Distributor GPS Tracking Backend API (V0 & V2)",
+    version="2.0.0",
     lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
@@ -37,7 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Exception handler to prevent stack traces in production
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception on {request.method} {request.url.path}: {exc}", exc_info=settings.DEBUG)
@@ -57,6 +56,9 @@ app.include_router(health_router)
 
 # Include API v0 endpoints
 app.include_router(api_v0_router)
+
+# Include API v2 endpoints
+app.include_router(api_v2_router)
 
 
 @app.get("/", response_model=RootResponse, tags=["Root"])
